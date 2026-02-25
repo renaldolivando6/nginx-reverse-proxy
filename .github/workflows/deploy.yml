@@ -1,0 +1,60 @@
+name: Deploy Nginx Reverse Proxy (Linux SSM)
+
+# Memicu HANYA secara manual dari tab Actions di GitHub
+on:
+  workflow_dispatch: {} 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Prepare and Send SSM command
+        id: send
+        run: |
+          # 1. Bungkus file docker-compose dan config nginx jadi base64
+          B64_COMPOSE=$(base64 -w 0 docker-compose.yml)
+          B64_NGINX=$(base64 -w 0 nginx/conf.d/default.conf)
+
+          # 2. Kirim perintah ke AWS via SSM
+          CMD_ID=$(aws ssm send-command \
+            --region "${{ secrets.AWS_REGION }}" \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids "${{ secrets.SSM_INSTANCE_ID_LINUX }}" \
+            --parameters "commands=[
+              \"mkdir -p /opt/apps/nginx-reverse-proxy/nginx/conf.d\",
+              \"cd /opt/apps/nginx-reverse-proxy\",
+              \"echo $B64_COMPOSE | base64 -d > docker-compose.yml\",
+              \"echo $B64_NGINX | base64 -d > nginx/conf.d/default.conf\",
+              \"sudo docker network ls | grep web-network || sudo docker network create web-network\",
+              \"sudo docker compose pull\",
+              \"sudo docker compose up -d --force-recreate\"
+            ]" \
+            --query "Command.CommandId" \
+            --output text)
+          
+          echo "command_id=$CMD_ID" >> "$GITHUB_OUTPUT"
+          echo "SSM Command sent with ID: $CMD_ID"
+
+      - name: Check Deployment Result
+        run: |
+          CMD_ID="${{ steps.send.outputs.command_id }}"
+          INSTANCE_ID="${{ secrets.SSM_INSTANCE_ID_LINUX }}"
+          
+          # Tunggu sebentar agar server sempat memproses
+          sleep 15
+          
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+            --output json
