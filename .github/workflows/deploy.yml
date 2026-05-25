@@ -32,6 +32,7 @@ jobs:
             --instance-ids "${{ secrets.SSM_INSTANCE_ID_LINUX }}" \
             --parameters "commands=[
               \"mkdir -p /opt/apps/nginx-reverse-proxy/nginx/conf.d\",
+              \"sudo mkdir -p /var/www/certbot\",
               \"cd /opt/apps/nginx-reverse-proxy\",
               \"echo $B64_COMPOSE | base64 -d > docker-compose.yml\",
               \"echo $B64_NGINX | base64 -d > nginx/conf.d/default.conf\",
