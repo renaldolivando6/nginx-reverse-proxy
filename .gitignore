@@ -3,3 +3,6 @@
 *.pem
 *.key
 *.crt
+
+# Konfigurasi lokal Claude Code
+.claude/
