@@ -21,11 +21,24 @@ jobs:
       - name: Prepare and Send SSM command
         id: send
         run: |
-          # 1. Bungkus file docker-compose dan config nginx jadi base64
+          # 1. Bungkus file docker-compose dan config nginx jadi base64.
+          #    00-global.conf WAJIB ikut: default.conf memakai log_format & zona
+          #    pembatas request yang didefinisikan di sana. Dulu file ini tidak
+          #    pernah dikirim (lihat tebu/SERVER-CONFIG.md, jebakan #5).
+          #    default-test.conf sengaja TIDAK dikirim: isinya domain server test
+          #    yang cert-nya tidak ada di server ini -> nginx gagal start.
           B64_COMPOSE=$(base64 -w 0 docker-compose.yml)
+          B64_GLOBAL=$(base64 -w 0 nginx/conf.d/00-global.conf)
           B64_NGINX=$(base64 -w 0 nginx/conf.d/default.conf)
 
-          # 2. Kirim perintah ke AWS via SSM
+          # 2. Kirim perintah ke AWS via SSM.
+          #    Config ditulis ke staging/ dulu dan diuji `nginx -t` (container
+          #    sekali pakai, mount & network sama dengan aslinya). Baru kalau lolos
+          #    disalin ke conf.d/ lalu container diganti. Kalau ditolak, conf.d/ dan
+          #    proxy yang sedang jalan tidak disentuh sama sekali -- tanpa langkah
+          #    ini satu typo mematikan SEMUA situs di server (tebu, dazytech, grafana).
+          #    staging/ diisi salinan conf.d/ yang ada dulu, supaya file lain yang
+          #    ikut terbaca nginx juga ikut diuji.
           CMD_ID=$(aws ssm send-command \
             --region "${{ secrets.AWS_REGION }}" \
             --document-name "AWS-RunShellScript" \
@@ -35,10 +48,13 @@ jobs:
               \"sudo mkdir -p /var/www/certbot\",
               \"cd /opt/apps/nginx-reverse-proxy\",
               \"echo $B64_COMPOSE | base64 -d > docker-compose.yml\",
-              \"echo $B64_NGINX | base64 -d > nginx/conf.d/default.conf\",
+              \"rm -rf /opt/apps/nginx-reverse-proxy/staging && mkdir -p /opt/apps/nginx-reverse-proxy/staging\",
+              \"cp nginx/conf.d/*.conf staging/ 2>/dev/null || true\",
+              \"echo $B64_GLOBAL | base64 -d > staging/00-global.conf\",
+              \"echo $B64_NGINX | base64 -d > staging/default.conf\",
               \"sudo docker network ls | grep web-network || sudo docker network create web-network\",
               \"sudo docker compose pull\",
-              \"sudo docker compose up -d --force-recreate\"
+              \"sudo docker run --rm --network web-network -v /opt/apps/nginx-reverse-proxy/staging:/etc/nginx/conf.d:ro -v /etc/letsencrypt:/etc/letsencrypt:ro nginx:alpine nginx -t && cp staging/*.conf nginx/conf.d/ && sudo docker compose up -d --force-recreate\"
             ]" \
             --query "Command.CommandId" \
             --output text)
@@ -50,12 +66,26 @@ jobs:
         run: |
           CMD_ID="${{ steps.send.outputs.command_id }}"
           INSTANCE_ID="${{ secrets.SSM_INSTANCE_ID_LINUX }}"
-          
-          # Tunggu sebentar agar server sempat memproses
-          sleep 15
-          
+
+          # Tunggu sampai perintah benar-benar selesai (dulu `sleep 15` tetap,
+          # sehingga hasilnya sering masih InProgress dan job selalu hijau).
+          # `|| true`: kalau gagal, statusnya dibaca & dilaporkan di bawah.
+          aws ssm wait command-executed \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" || true
+
           aws ssm get-command-invocation \
             --command-id "$CMD_ID" \
             --instance-id "$INSTANCE_ID" \
             --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
             --output json
+
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query "Status" --output text)
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "::error::Deploy berstatus $STATUS. Kalau Error di atas berisi pesan 'nginx: [emerg]', config ditolak nginx -t dan proxy LAMA masih jalan -- perbaiki config lalu deploy ulang."
+            exit 1
+          fi
