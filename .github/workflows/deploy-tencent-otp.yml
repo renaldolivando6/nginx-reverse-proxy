@@ -1,0 +1,38 @@
+name: Deploy Nginx Reverse Proxy (Tencent TAT - otpnusantara.com)
+
+# Manual dari tab Actions. Hanya untuk server Tencent Lighthouse (otpnusantara.com);
+# server AWS memakai deploy.yml. File yang dikirim hanya dari servers/tencent-otp/.
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-tencent-otp-proxy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      TENCENTCLOUD_SECRET_ID: ${{ secrets.TENCENTCLOUD_SECRET_ID }}
+      TENCENTCLOUD_SECRET_KEY: ${{ secrets.TENCENTCLOUD_SECRET_KEY }}
+      TENCENT_REGION: ${{ secrets.TENCENT_REGION }}
+      TENCENT_INSTANCE_ID: ${{ secrets.TENCENT_INSTANCE_ID_OTP }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tccli
+        run: pip install --quiet tccli
+
+      - name: Susun skrip deploy
+        working-directory: servers/tencent-otp
+        run: |
+          {
+            echo "B64_COMPOSE='$(base64 -w 0 docker-compose.yml)'"
+            echo "B64_GLOBAL='$(base64 -w 0 nginx/conf.d/00-global.conf)'"
+            echo "B64_SITE='$(base64 -w 0 nginx/conf.d/otpnusantara.conf)'"
+            echo "B64_PROXY='$(base64 -w 0 nginx/conf.d/otp-proxy.inc)'"
+            cat deploy/apply.sh
+          } > "$GITHUB_WORKSPACE/run.sh"
+
+      - name: Deploy lewat TAT
+        run: bash .github/scripts/tat-run.sh run.sh 600
