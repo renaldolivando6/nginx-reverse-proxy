@@ -1,0 +1,39 @@
+name: Deploy Nginx Reverse Proxy (LB-SB-1 - wezy.dazytech.web.id)
+
+# Manual dari tab Actions. Hanya untuk server AWS LB-SB-1 (Wezy, dulu server
+# test); server AWS utama memakai deploy-web-linux.yml, Tencent memakai
+# deploy-tencent-otp.yml. File yang dikirim hanya dari servers/lb-sb-1/. Deploy
+# pertama sekaligus menerbitkan sertifikat Let's Encrypt (servers/lb-sb-1/README.md).
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-lb-sb-1-proxy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Satu bundel tar: file conf baru di nginx/conf.d/ ikut terkirim tanpa
+      # mengubah workflow ini.
+      - name: Susun skrip deploy
+        working-directory: servers/lb-sb-1
+        run: |
+          {
+            echo "B64_BUNDLE='$(tar -czf - docker-compose.yml nginx/conf.d | base64 -w 0)'"
+            cat deploy/apply.sh
+          } > "$GITHUB_WORKSPACE/run.sh"
+
+      - name: Deploy lewat SSM
+        run: bash .github/scripts/ssm-run.sh "${{ secrets.SSM_INSTANCE_ID_LB_SB_1 }}" run.sh 900

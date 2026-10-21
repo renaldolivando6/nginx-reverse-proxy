@@ -1,6 +1,8 @@
-name: Deploy Nginx Reverse Proxy (Linux SSM)
+name: Deploy Nginx Reverse Proxy (WEB_LINUX - tebu, dazytech, monitoring, buatcv)
 
-# Memicu HANYA secara manual dari tab Actions di GitHub
+# Memicu HANYA secara manual dari tab Actions di GitHub. Server AWS utama
+# WEB_LINUX, config di nginx/ dan docker-compose.yml di root repo. Server lain:
+# deploy-lb-sb-1.yml (Wezy), deploy-tencent-otp.yml (OTP Nusantara).
 on:
   workflow_dispatch: {} 
 
@@ -25,8 +27,6 @@ jobs:
           #    00-global.conf WAJIB ikut: default.conf memakai log_format & zona
           #    pembatas request yang didefinisikan di sana. Dulu file ini tidak
           #    pernah dikirim (lihat tebu/SERVER-CONFIG.md, jebakan #5).
-          #    default-test.conf sengaja TIDAK dikirim: isinya domain server test
-          #    yang cert-nya tidak ada di server ini -> nginx gagal start.
           B64_COMPOSE=$(base64 -w 0 docker-compose.yml)
           B64_GLOBAL=$(base64 -w 0 nginx/conf.d/00-global.conf)
           B64_NGINX=$(base64 -w 0 nginx/conf.d/default.conf)

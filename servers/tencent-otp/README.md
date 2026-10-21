@@ -1,7 +1,8 @@
 # Reverse proxy server Tencent (otpnusantara.com)
 
 Server: Tencent Lighthouse Jakarta, instance `lhins-jf50zxos`, IP `43.173.53.33`.
-Terpisah dari server AWS (config di `nginx/` dan `deploy.yml` di root repo).
+Terpisah dari server AWS (WEB_LINUX: `nginx/` di root repo + `deploy-web-linux.yml`;
+LB-SB-1: `servers/lb-sb-1/`).
 
 ## Isi folder
 

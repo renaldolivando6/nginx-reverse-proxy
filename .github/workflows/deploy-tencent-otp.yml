@@ -1,7 +1,8 @@
 name: Deploy Nginx Reverse Proxy (Tencent TAT - otpnusantara.com)
 
 # Manual dari tab Actions. Hanya untuk server Tencent Lighthouse (otpnusantara.com);
-# server AWS memakai deploy.yml. File yang dikirim hanya dari servers/tencent-otp/.
+# server AWS memakai deploy-web-linux.yml dan deploy-lb-sb-1.yml. File yang
+# dikirim hanya dari servers/tencent-otp/.
 on:
   workflow_dispatch: {}
 

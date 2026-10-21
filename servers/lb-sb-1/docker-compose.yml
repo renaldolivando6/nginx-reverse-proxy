@@ -1,0 +1,29 @@
+# Reverse proxy server AWS LB-SB-1 (wezy.dazytech.web.id). Terpisah dari
+# docker-compose.yml di root repo (server AWS utama). Deploy: deploy-lb-sb-1.yml.
+services:
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-reverse-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # Let's Encrypt: diterbitkan & diperpanjang certbot di container sekali
+      # pakai (deploy/apply.sh), lewat webroot /var/www/certbot.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    # Log akses nginx masuk ke log Docker; tanpa batas bisa memenuhi disk yang
+    # juga dipakai database & media Wezy. Maksimal 5 x 20 MB.
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    networks:
+      - web-network
+
+networks:
+  web-network:
+    external: true
