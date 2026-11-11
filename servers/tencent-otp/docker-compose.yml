@@ -1,5 +1,5 @@
-# Reverse proxy server Tencent Lighthouse (otpnusantara.com). Terpisah dari
-# docker-compose.yml di root repo (server AWS). Deploy: deploy-tencent-otp.yml.
+# Reverse proxy server Tencent Lighthouse (otpnusantara.com, skytastore.dazytech.web.id).
+# Terpisah dari docker-compose.yml di root repo (server AWS). Deploy: deploy-tencent-otp.yml.
 services:
   nginx-proxy:
     image: nginx:alpine
@@ -10,9 +10,11 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      # Cloudflare Origin Certificate (dipasang manual, lihat README folder ini).
+      # otpnusantara.com: Cloudflare Origin Certificate (dipasang manual, lihat README).
       - /etc/ssl/otpnusantara:/etc/ssl/otpnusantara:ro
-      # Cadangan bila kelak pindah ke Let's Encrypt (certbot webroot).
+      # Domain tanpa Cloudflare (skytastore.dazytech.web.id): Let's Encrypt,
+      # diterbitkan & diperpanjang certbot di container sekali pakai (deploy/apply.sh).
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
     networks:
       - web-network
