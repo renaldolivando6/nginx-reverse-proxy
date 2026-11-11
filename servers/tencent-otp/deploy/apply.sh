@@ -62,13 +62,11 @@ fi
 sleep 2
 docker compose ps
 
-# Sisa masa skytastore.dazytech.web.id (Let's Encrypt, sudah tidak dipakai): timer
-# perpanjangan sertifikat dimatikan. /etc/letsencrypt dibiarkan (tidak dibaca lagi).
-if [ -f /etc/systemd/system/nginx-cert-renew.timer ]; then
-    systemctl disable --now nginx-cert-renew.timer || true
-    rm -f /etc/systemd/system/nginx-cert-renew.timer /etc/systemd/system/nginx-cert-renew.service
-    systemctl daemon-reload
-    echo "== Timer Let's Encrypt lama (skytastore) dihapus."
+# Sisa skytastore.dazytech.web.id (Let's Encrypt): timer, sertifikat, dan image certbot
+# sudah dihapus 11 November 2026. Dua folder kosong dibiarkan selama container lama masih
+# me-mount-nya; dihapus di sini begitu container memakai docker-compose.yml tanpa mount itu.
+if ! docker inspect -f '{{range .Mounts}}{{.Source}} {{end}}' nginx-reverse-proxy | grep -qE '/etc/letsencrypt|/var/www/certbot'; then
+    rmdir /etc/letsencrypt /var/www/certbot 2>/dev/null || true
 fi
 
 # Jawaban lewat nginx server ini (bukan Cloudflare). 502 = aplikasi belum jalan.

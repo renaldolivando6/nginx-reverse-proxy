@@ -30,8 +30,8 @@ menjangkau server langsung.
 
 Console Tencent > Lighthouse > instance > **Firewall**: TCP **80** dan **443** hanya dari
 rentang IPv4 Cloudflare (https://www.cloudflare.com/ips-v4/, satu aturan per rentang,
-port `80,443`). Tidak ada aturan 80/443 dari `0.0.0.0/0` (dulu dibuka untuk
-skytastore.dazytech.web.id; sudah tidak dipakai, hapus). Port 22 tetap hanya untuk IP kantor.
+port `80,443`). Tidak ada aturan 80/443 dari `0.0.0.0/0` (aturan TEMP untuk
+skytastore.dazytech.web.id sudah dihapus 11 November 2026). Port 22 tetap hanya untuk IP kantor.
 
 Lapisan kedua: server block setiap situs menolak koneksi yang bukan dari rentang
 Cloudflare atau dari server ini sendiri (`$origin_allowed` di `00-global.conf`), dan
