@@ -1,10 +1,9 @@
-name: Deploy Nginx Reverse Proxy (Tencent TAT - otpnusantara.com, skytastore)
+name: Deploy Nginx Reverse Proxy (Tencent TAT - otpnusantara.com, cleogames.id)
 
 # Manual dari tab Actions. Hanya untuk server Tencent Lighthouse (otpnusantara.com,
-# skytastore.dazytech.web.id); server AWS memakai deploy-web-linux.yml dan
-# deploy-lb-sb-1.yml. File yang dikirim hanya dari servers/tencent-otp/. Deploy
-# pertama untuk domain baru sekaligus menerbitkan sertifikat Let's Encrypt-nya
-# (servers/tencent-otp/README.md).
+# cleogames.id, keduanya lewat Cloudflare); server AWS memakai deploy-web-linux.yml
+# dan deploy-lb-sb-1.yml. File yang dikirim hanya dari servers/tencent-otp/.
+# Sertifikat Cloudflare Origin dipasang manual (servers/tencent-otp/README.md).
 on:
   workflow_dispatch: {}
 

@@ -1,4 +1,4 @@
-# Reverse proxy server Tencent Lighthouse (otpnusantara.com, skytastore.dazytech.web.id).
+# Reverse proxy server Tencent Lighthouse (otpnusantara.com, cleogames.id).
 # Terpisah dari docker-compose.yml di root repo (server AWS). Deploy: deploy-tencent-otp.yml.
 services:
   nginx-proxy:
@@ -10,12 +10,9 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      # otpnusantara.com: Cloudflare Origin Certificate (dipasang manual, lihat README).
+      # Cloudflare Origin Certificate per domain (dipasang manual, lihat README).
       - /etc/ssl/otpnusantara:/etc/ssl/otpnusantara:ro
-      # Domain tanpa Cloudflare (skytastore.dazytech.web.id): Let's Encrypt,
-      # diterbitkan & diperpanjang certbot di container sekali pakai (deploy/apply.sh).
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
+      - /etc/ssl/cleogames:/etc/ssl/cleogames:ro
     networks:
       - web-network
 

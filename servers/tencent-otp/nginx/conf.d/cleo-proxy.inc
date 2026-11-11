@@ -1,9 +1,10 @@
-# Pengaturan proxy ke skyta-app. Berekstensi .inc supaya tidak ter-include otomatis
+# Pengaturan proxy ke cleo-app. Berekstensi .inc supaya tidak ter-include otomatis
 # oleh nginx.conf (yang hanya membaca conf.d/*.conf); dipakai lewat `include`.
 #
-# X-Forwarded-For diisi IP koneksi SAJA ($remote_addr), bukan rantai dari klien,
-# supaya tidak bisa dipalsukan. Laravel mempercayai header ini hanya dari subnet
-# web-network (TRUSTED_PROXIES).
+# X-Forwarded-For diisi IP asli SAJA ($remote_addr setelah real_ip Cloudflare),
+# bukan rantai dari klien, supaya tidak bisa dipalsukan. Laravel mempercayai
+# header ini hanya dari subnet web-network (TRUSTED_PROXIES); allowlist IP
+# webhook Digiflazz (52.74.250.133) dan rate limit aplikasi membaca nilai ini.
 proxy_set_header Host              $host;
 proxy_set_header X-Real-IP         $remote_addr;
 proxy_set_header X-Forwarded-For   $remote_addr;
