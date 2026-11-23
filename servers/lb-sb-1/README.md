@@ -1,6 +1,7 @@
-# Reverse proxy server AWS LB-SB-1 (wezy.dazytech.web.id)
+# Reverse proxy server AWS LB-SB-1 (wezy.dazytech.web.id, kiu.dazytech.web.id)
 
-Server AWS khusus Wezy: hanya `nginx-reverse-proxy` dan `wezy-app` (repo `wezy`).
+Server AWS untuk Wezy dan Kiu: `nginx-reverse-proxy`, `wezy-app` (repo `wezy`), `kiu-app` (repo `kiu`),
+plus `foto-audit`.
 Dulu server test (tebu-test, dazy-test; secret lama `SSM_INSTANCE_ID_LINUX_TEST`).
 Terpisah dari server AWS utama WEB_LINUX (config di `nginx/` root repo, `deploy-web-linux.yml`).
 
@@ -12,6 +13,7 @@ Terpisah dari server AWS utama WEB_LINUX (config di `nginx/` root repo, `deploy-
 | `nginx/conf.d/00-global.conf` | format log, resolver DNS Docker |
 | `nginx/conf.d/http.conf` | port 80: acme-challenge certbot, redirect ke HTTPS, host asing ditutup |
 | `nginx/conf.d/wezy.conf` | port 443: `wezy.dazytech.web.id` -> `wezy-app:3000`, SNI asing ditolak |
+| `nginx/conf.d/kiu.conf` | port 443: `kiu.dazytech.web.id` -> `kiu-app:3000`, endpoint SSE `/api/*/*/stream/` tanpa buffer |
 | `deploy/apply.sh` | dijalankan di server lewat SSM: terbit sertifikat (bila belum ada), uji `nginx -t`, terapkan, pasang timer perpanjangan |
 
 Upstream dipanggil lewat variabel + resolver Docker, jadi nginx tetap start walau
@@ -60,3 +62,8 @@ terbaca tanpa reload.
 Tambah domain di `DOMAINS` (`deploy/apply.sh`), server block port 80 di `http.conf`, dan
 file `.conf` baru untuk port 443. Semua file di `nginx/conf.d/` ikut terkirim; isi
 `conf.d` di server disamakan persis dengan folder ini.
+
+DNS situs baru harus sudah mengarah ke server ini sebelum workflow dijalankan. Selama
+sertifikat baru diterbitkan, situs lain tetap HTTPS (hanya file `.conf` yang memakai
+sertifikat yang belum ada yang ditahan); kalau DNS belum siap, deploy berhenti tanpa
+mengganggu situs lain.

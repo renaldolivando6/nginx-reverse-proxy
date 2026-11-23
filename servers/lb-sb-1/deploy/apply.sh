@@ -14,7 +14,7 @@ set -euo pipefail
 BASE=/opt/apps/nginx-reverse-proxy
 # Domain yang sertifikatnya diterbitkan otomatis. Tambah situs = tambah domain
 # di sini, server block port 80 di http.conf, dan file 443 di conf.d/.
-DOMAINS=(wezy.dazytech.web.id)
+DOMAINS=(wezy.dazytech.web.id kiu.dazytech.web.id)
 CERTBOT_IMAGE=certbot/certbot
 DOCKER=$(command -v docker)
 
@@ -80,11 +80,23 @@ for d in "${DOMAINS[@]}"; do
 done
 
 if [ "${#missing[@]}" -gt 0 ]; then
-    echo "== Sertifikat belum ada: ${missing[*]}. nginx dinyalakan port 80 saja untuk certbot."
+    echo "== Sertifikat belum ada: ${missing[*]}. nginx dinyalakan tanpa situs itu dulu untuk certbot."
     rm -rf staging && mkdir staging
     cp incoming/nginx/conf.d/00-global.conf incoming/nginx/conf.d/http.conf staging/
+    # Situs yang sertifikatnya SUDAH ada tetap dilayani HTTPS selama sertifikat baru
+    # diterbitkan (dulu semua 443 mati, dan tetap mati kalau check_acme gagal karena
+    # DNS situs baru belum siap). Hanya file yang memakai sertifikat yang belum ada
+    # yang ditahan.
+    for f in incoming/nginx/conf.d/*.conf; do
+        case "$(basename "$f")" in 00-global.conf | http.conf) continue ;; esac
+        hold=
+        for d in "${missing[@]}"; do
+            if grep -q "/live/$d/" "$f"; then hold=1; fi
+        done
+        if [ -z "$hold" ]; then cp "$f" staging/; else echo "   ditahan sampai sertifikat terbit: $(basename "$f")"; fi
+    done
     if ! nginx_test staging; then
-        echo "ERROR: config port 80 ditolak nginx -t. Proxy lama tetap berjalan."
+        echo "ERROR: config sementara ditolak nginx -t. Proxy lama tetap berjalan."
         exit 1
     fi
     apply staging
@@ -147,5 +159,5 @@ for d in "${DOMAINS[@]}"; do
     code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 \
         --resolve "$d:443:127.0.0.1" "https://$d/api/health/" || true)
     echo "== https://$d/api/health/ -> HTTP $code"
-    [ "$code" != 502 ] || echo "   502: aplikasi belum jalan (wezy-app: workflow Deploy Wezy (Next.js) di repo wezy)."
+    [ "$code" != 502 ] || echo "   502: aplikasi belum jalan (wezy-app: workflow Deploy Wezy di repo wezy; kiu-app: docs/OPERASIONAL.md di repo kiu)."
 done
